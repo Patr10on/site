@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorgu Paneli</title>
+    <style>
+        :root {
+            --bg-color: #1a0a2e; /* Koyu mor arka plan */
+            --primary: #db2777; /* Ana renk - Canlı pembe */
+            --secondary: #f5d0fe; /* İkincil renk - Açık eflatun/lavanta */
+            --text: #e2e8f0; /* Metin rengi - Neredeyse beyaz */
+            --panel-bg: rgba(30, 16, 58, 0.6); /* Yarı saydam panel arka planı */
+            --border: rgba(219, 39, 119, 0.3); /* Yarı saydam pembe kenarlık */
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            font-size: 2.5rem;
+            margin: 20px 0;
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary);
+            letter-spacing: 3px;
+            text-align: center; /* Uzun metinler için hizalama eklendi */
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+        
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(219, 39, 119, 0.1);
+        }
+        
+        .panel-title {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            background: rgba(2, 6, 23, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text);
+        }
+        
+        button {
+            background: var(--primary);
+            color: var(--bg-color);
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: var(--secondary);
+            color: var(--bg-color);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 208, 254, 0.3);
+        }
+        
+        button:disabled {
+            background: #64748b;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result {
+            background: rgba(2, 6, 23, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 15px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .actions button {
+            flex: 1;
+            padding: 8px;
+            font-size: 0.8rem;
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .actions button:hover {
+            background: rgba(219, 39, 119, 0.1);
+        }
+        
+        .loader {
+            border: 3px solid rgba(219, 39, 119, 0.2);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            background: rgba(30, 16, 58, 0.9);
+            border: 1px solid var(--primary);
+            border-radius: 5px;
+            transform: translateX(200%);
+            transition: transform 0.3s;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                font-size: 1.8rem;
+            }
+            
+            .panel {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="header">DARKWİB KİLLİR ECO</h1>
+    
+    <div class="container">
+        <div class="panel">
+            <div class="panel-title">Sorgu Paneli</div>
+            <label for="api">API Seçin:</label>
+            <select id="api">
+                <option value="1">API 1</option>
+                <option value="2">API 2</option>
+            </select>
+            
+            <label for="sorgu">Sorgu Türü:</label>
+            <select id="sorgu">
+                <option value="1">1 - Sülale Sorgu</option>
+                <option value="2">2 - TC Bilgi</option>
+                <option value="3">3 - Adres Sorgu</option>
+                <option value="4">4 - Ad+Soyad+İl</option>
+                <option value="5">5 - Aile Sorgu</option>
+                <option value="6">6 - Numaradan TC</option>
+                <option value="7">7 - TC'den Numara</option>
+                <option value="8">8 - Diploma Sorgu</option>
+                <option value="9">9 - Ayak No Sorgu</option>
+                <option value="10">10 - Boy Sorgu</option>
+                <option value="11">11 - Burç Sorgu</option>
+                <option value="12">12 - CM Bilgisi</option>
+                <option value="13">13 - Çocuk Bilgisi</option>
+                <option value="14">14 - Anne Bilgisi</option>
+                <option value="15">15 - Ehliyet Sorgu</option>
+                <option value="16">16 - IMEI Sorgu</option>
+                <option value="17">17 - Operatör Sorgu</option>
+                <option value="18">18 - Telegram Sorgu</option>
+                <option value="19">19 - Hikaye Sorgu</option>
+                <option value="20">20 - Vesika Sorgu</option>
+                <option value="21">21 - Hane Sorgu</option>
+                <option value="22">22 - Muhattap Sorgu</option>
+                <option value="23">23 - LGS Sonuç</option>
+                <option value="24">24 - Plaka Sorgu</option>
+                <option value="25">25 - İG @by_.ram</option>
+                <option value="26">26 - Sertifika Sorgu</option>
+                <option value="27">27 - Üniversite Sorgu</option>
+                <option value="28">28 - Araç Parça Sorgu</option>
+                <option value="29">29 - Şehit Sorgu</option>
+                <option value="30">30 - Interpol Sorgu</option>
+                <option value="31">31 - Personel Sorgu</option>
+                <option value="32">32 - İnternet Abonelik</option>
+                <option value="33">33 - NVI Sorgu</option>
+                <option value="34">34 - Nezaket Sorgu</option>
+                <option value="35">35 - Başvuru Sorgu</option>
+                <option value="36">36 - Polis Kaydı</option>
+                <option value="37">37 - Tapu Sorgu</option>
+                <option value="38">38 - Okul No Sorgu</option>
+                <option value="39">39 - İşyeri Yetkili</option>
+                <option value="40">40 - İşyeri Sorgu</option>
+                <option value="41">41 - İNFO Sorgu (1+2+3+5)</option>
+            </select>
+            
+            <div id="inputs"></div>
+            
+            <button id="submit">
+                <span id="button-text">SORGULA</span>
+                <div class="loader" id="loader"></div>
+            </button>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-title">Sorgu Sonucu</div>
+            <div class="result" id="result"></div>
+            <div class="actions">
+                <button id="copy-btn">Kopyala</button>
+                <button id="download-btn">İndir</button>
+                <button id="clear-btn">Temizle</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sorguSelect = document.getElementById('sorgu');
+            const inputsDiv = document.getElementById('inputs');
+            const submitBtn = document.getElementById('submit');
+            const buttonText = document.getElementById('button-text');
+            const loader = document.getElementById('loader');
+            const resultDiv = document.getElementById('result');
+            const copyBtn = document.getElementById('copy-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const notification = document.getElementById('notification');
+            
+            let lastResult = '';
+            let lastSorguType = '1';
+            
+            // Input alanlarını güncelle
+            function updateInputs() {
+                inputsDiv.innerHTML = '';
+                const sorguType = sorguSelect.value;
+                lastSorguType = sorguType;
+                
+                // TC gerektiren sorgular
+                const tcSorgulari = ['1', '2', '3', '5', '7', '8', '9', '10', '11', '12', '13', 
+                                     '14', '15', '19', '20', '21', '22', '23', '26', '27', '31', 
+                                     '32', '33', '35', '36', '37', '38', '39', '40', '41'];
+                
+                // Ad-Soyad gerektiren sorgular
+                const adSoyadSorgulari = ['4', '29', '30'];
+                
+                // GSM gerektiren sorgular
+                const gsmSorgulari = ['6', '17'];
+                
+                // Özel sorgular
+                if (tcSorgulari.includes(sorguType)) {
+                    addInput('tc', 'TC Kimlik No:', '11 haneli TC girin');
+                } 
+                else if (adSoyadSorgulari.includes(sorguType)) {
+                    addInput('ad', 'Ad:', 'İsim girin');
+                    addInput('soyad', 'Soyad:', 'Soyisim girin');
+                    
+                    if (sorguType === '4') {
+                        addInput('il', 'İl:', 'Şehir girin');
+                    }
+                    if (sorguType === '30') {
+                        addInput('ilce', 'İlçe:', 'İlçe girin');
+                    }
+                } 
+                else if (gsmSorgulari.includes(sorguType)) {
+                    addInput('gsm', 'Telefon No:', '5xx xxx xx xx');
+                } 
+                else if (sorguType === '16') {
+                    addInput('imei', 'IMEI No:', '15 haneli IMEI girin');
+                } 
+                else if (sorguType === '18') {
+                    addInput('username', 'Telegram Kullanıcı Adı:', '@kullaniciadi');
+                } 
+                else if (sorguType === '24' || sorguType === '28') {
+                    addInput('plaka', 'Plaka:', '34 ABC 123');
+                } 
+                else if (sorguType === '34') {
+                    addInput('il', 'İl:', 'Şehir girin');
+                    addInput('ilce', 'İlçe:', 'İlçe girin');
+                }
+            }
+            
+            // Input ekleme fonksiyonu
+            function addInput(id, label, placeholder) {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label for="${id}">${label}</label>
+                    <input type="text" id="${id}" placeholder="${placeholder}">
+                `;
+                inputsDiv.appendChild(div);
+            }
+            
+            // Bildirim göster
+            function showNotification(message, type = 'success') {
+                notification.textContent = message;
+                notification.style.borderColor = type === 'success' ? '#db2777' : '#f87171'; // Değiştirilen satır
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+            
+            // Sorgu gönder
+            async function sendQuery() {
+                const api = document.getElementById('api').value;
+                const sorguType = sorguSelect.value;
+                const data = { api, sorgu: sorguType };
+                
+                // Input değerlerini topla
+                const tcSorgulari = ['1', '2', '3', '5', '7', '8', '9', '10', '11', '12', '13', 
+                                   '14', '15', '19', '20', '21', '22', '23', '26', '27', '31', 
+                                   '32', '33', '35', '36', '37', '38', '39', '40', '41'];
+                const adSoyadSorgulari = ['4', '29', '30'];
+                const gsmSorgulari = ['6', '17'];
+                
+                if (tcSorgulari.includes(sorguType)) {
+                    data.tc = document.getElementById('tc')?.value.trim();
+                    if (!data.tc) {
+                        showNotification('TC kimlik numarası giriniz!', 'error');
+                        return;
+                    }
+                } 
+                else if (adSoyadSorgulari.includes(sorguType)) {
+                    data.ad = document.getElementById('ad')?.value.trim();
+                    data.soyad = document.getElementById('soyad')?.value.trim();
+                    
+                    if (!data.ad || !data.soyad) {
+                        showNotification('Ad ve soyad giriniz!', 'error');
+                        return;
+                    }
+                    
+                    if (sorguType === '4') {
+                        data.il = document.getElementById('il')?.value.trim();
+                        if (!data.il) {
+                            showNotification('İl bilgisi giriniz!', 'error');
+                            return;
+                        }
+                    }
+                    if (sorguType === '30') {
+                        data.ilce = document.getElementById('ilce')?.value.trim();
+                    }
+                } 
+                else if (gsmSorgulari.includes(sorguType)) {
+                    data.gsm = document.getElementById('gsm')?.value.trim();
+                    if (!data.gsm) {
+                        showNotification('Telefon numarası giriniz!', 'error');
+                        return;
+                    }
+                } 
+                else if (sorguType === '16') {
+                    data.imei = document.getElementById('imei')?.value.trim();
+                    if (!data.imei) {
+                        showNotification('IMEI numarası giriniz!', 'error');
+                        return;
+                    }
+                } 
+                else if (sorguType === '18') {
+                    data.username = document.getElementById('username')?.value.trim();
+                    if (!data.username) {
+                        showNotification('Telegram kullanıcı adı giriniz!', 'error');
+                        return;
+                    }
+                } 
+                else if (sorguType === '24' || sorguType === '28') {
+                    data.plaka = document.getElementById('plaka')?.value.trim();
+                    if (!data.plaka) {
+                        showNotification('Plaka bilgisi giriniz!', 'error');
+                        return;
+                    }
+                } 
+                else if (sorguType === '34') {
+                    data.il = document.getElementById('il')?.value.trim();
+                    data.ilce = document.getElementById('ilce')?.value.trim();
+                    if (!data.il || !data.ilce) {
+                        showNotification('İl ve ilçe bilgisi giriniz!', 'error');
+                        return;
+                    }
+                }
+                
+                // Yükleme animasyonu
+                submitBtn.disabled = true;
+                buttonText.style.display = 'none';
+                loader.style.display = 'block';
+                resultDiv.textContent = 'Sorgulanıyor...';
+                
+                try {
+                    // Bu kısım sunucuya istek gönderdiği için çalışmaz, örnek olarak bırakılmıştır.
+                    // Gerçek bir senaryoda buradaki URL'nin ve API'nin çalışıyor olması gerekir.
+                    // Simülasyon için 2 saniye bekleyip sahte bir sonuç göstereceğiz.
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    const result = { success: true, result: `Örnek sonuç:\n\nSorgu Tipi: ${sorguType}\nGönderilen Veri: ${JSON.stringify(data, null, 2)}\n\nBu sadece bir görsel önizlemedir.` };
+
+                    if (result.success) {
+                        lastResult = result.result || 'Sonuç bulunamadı';
+                        resultDiv.textContent = lastResult;
+                        showNotification('Sorgu başarılı!', 'success');
+                    } else {
+                        lastResult = 'Sorgu başarısız!';
+                        resultDiv.textContent = lastResult;
+                        showNotification(lastResult, 'error');
+                    }
+                } catch (error) {
+                    lastResult = `Hata: ${error.message}`;
+                    resultDiv.textContent = lastResult;
+                    showNotification('Sorgu başarısız!', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    buttonText.style.display = 'block';
+                    loader.style.display = 'none';
+                }
+            }
+            
+            // Kopyala butonu
+            copyBtn.addEventListener('click', () => {
+                if (!lastResult) {
+                    showNotification('Kopyalanacak sonuç yok!', 'error');
+                    return;
+                }
+                
+                navigator.clipboard.writeText(lastResult)
+                    .then(() => showNotification('Panoya kopyalandı!', 'success'))
+                    .catch(() => showNotification('Kopyalama başarısız!', 'error'));
+            });
+            
+            // İndir butonu
+            downloadBtn.addEventListener('click', () => {
+                if (!lastResult) {
+                    showNotification('İndirilecek sonuç yok!', 'error');
+                    return;
+                }
+                
+                const blob = new Blob([lastResult], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Sorgu tipine göre dosya adı
+                let fileName;
+                if (lastSorguType === '41') {
+                    const tc = document.getElementById('tc')?.value.trim() || 'kombine';
+                    fileName = `Patron_Kombine_${tc}_${new Date().toISOString().slice(0, 10)}.txt`;
+                } else {
+                    const sorguAdi = sorguSelect.options[sorguSelect.selectedIndex].text.split('-')[1].trim();
+                    fileName = `Patron_${sorguAdi}_${new Date().toISOString().slice(0, 10)}.txt`;
+                }
+                
+                a.download = fileName;
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showNotification('Dosya indiriliyor...', 'success');
+            });
+            
+            // Temizle butonu
+            clearBtn.addEventListener('click', () => {
+                resultDiv.textContent = '';
+                lastResult = '';
+                showNotification('Sonuçlar temizlendi!', 'success');
+            });
+            
+            // Sorgu tipi değiştiğinde inputları güncelle
+            sorguSelect.addEventListener('change', updateInputs);
+            
+            // Sorgu butonu
+            submitBtn.addEventListener('click', sendQuery);
+            
+            // İlk yüklemede inputları ayarla
+            updateInputs();
+        });
+    </script>
+</body>
+</html>
