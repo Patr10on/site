@@ -39,7 +39,7 @@
             color: var(--primary);
             text-shadow: 0 0 10px var(--primary);
             letter-spacing: 3px;
-            text-align: center; /* Uzun metinler için hizalama eklendi */
+            text-align: center;
         }
 
         .container {
@@ -252,6 +252,10 @@
 
         <div class="panel">
             <div class="panel-title">Sorgu Sonucu</div>
+            
+            <!-- Filtreleme alanı eklendi -->
+            <input type="text" id="filterInput" placeholder="Sonuçları filtrele..." class="input-field mb-4">
+            
             <div class="result" id="result"></div>
             <div class="actions">
                 <button id="copy-btn">Kopyala</button>
@@ -276,9 +280,11 @@
             const downloadBtn = document.getElementById('download-btn');
             const clearBtn = document.getElementById('clear-btn');
             const notification = document.getElementById('notification');
+            const filterInput = document.getElementById('filterInput');
 
             let lastResult = '';
-            
+            let originalResult = ''; // Orijinal sonucu tutmak için yeni değişken
+
             // Sorgu tiplerine göre gerekli inputları belirleyen nesne
             const requiredInputs = {
                 '1': ['tc'], '2': ['tc'], '3': ['tc'], '4': ['ad', 'soyad', 'il'], '5': ['tc'],
@@ -395,7 +401,7 @@
                     });
 
                     const result = await response.json();
-
+                    
                     if (result.success) {
                         if (result.results) { // Kombine sorgu için
                             let combinedOutput = '';
@@ -403,35 +409,51 @@
                                 combinedOutput += `--- ${key.toUpperCase()} ---\n${result.results[key]}\n\n`;
                             }
                             lastResult = combinedOutput;
-                            resultDiv.textContent = lastResult;
                         } else { // Tekli sorgu için
                             lastResult = result.result;
-                            resultDiv.textContent = lastResult;
                         }
+                        originalResult = lastResult; // Orijinal sonucu sakla
+                        resultDiv.textContent = lastResult;
                         showNotification('Sorgu başarılı!', 'success');
                     } else {
                         lastResult = result.message || 'Sorgu başarısız oldu.';
+                        originalResult = lastResult;
                         resultDiv.textContent = lastResult;
                         showNotification(lastResult, 'error');
                     }
                 } catch (error) {
                     lastResult = `Hata: ${error.message}`;
+                    originalResult = lastResult;
                     resultDiv.textContent = `Bir hata oluştu: ${error.message}`;
                     showNotification('Sorgu başarısız!', 'error');
                 } finally {
                     submitBtn.disabled = false;
                     buttonText.style.display = 'block';
                     loader.style.display = 'none';
+                    filterInput.value = ''; // Filtreleme kutusunu temizle
                 }
             }
 
+            // Filtreleme fonksiyonu
+            function filterResult() {
+                const filterText = filterInput.value.toLowerCase();
+                if (!filterText) {
+                    resultDiv.textContent = originalResult;
+                    return;
+                }
+
+                const lines = originalResult.split('\n');
+                const filteredLines = lines.filter(line => line.toLowerCase().includes(filterText));
+                resultDiv.textContent = filteredLines.join('\n');
+            }
+            
             // Kopyala butonu
             copyBtn.addEventListener('click', () => {
                 if (!lastResult) {
                     showNotification('Kopyalanacak sonuç yok!', 'error');
                     return;
                 }
-                navigator.clipboard.writeText(lastResult)
+                navigator.clipboard.writeText(resultDiv.textContent)
                     .then(() => showNotification('Panoya kopyalandı!', 'success'))
                     .catch(() => showNotification('Kopyalama başarısız!', 'error'));
             });
@@ -463,12 +485,15 @@
             clearBtn.addEventListener('click', () => {
                 resultDiv.textContent = '';
                 lastResult = '';
+                originalResult = '';
+                filterInput.value = '';
                 showNotification('Sonuçlar temizlendi!', 'success');
             });
 
             // Olay dinleyicileri
             sorguSelect.addEventListener('change', updateInputs);
             submitBtn.addEventListener('click', sendQuery);
+            filterInput.addEventListener('input', filterResult);
             
             // İlk yüklemede inputları ayarla
             updateInputs();
